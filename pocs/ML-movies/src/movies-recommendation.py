@@ -3,6 +3,7 @@ import pandas as pd
 from surprise import Dataset, Reader, SVD
 from surprise.model_selection import cross_validate
 import pickle
+from flask import Flask, jsonify, request
 
 movies_path = os.path.join('..', 'dataset', 'movies_metadata.csv')
 ratings_path = os.path.join('..', 'dataset', 'ratings.csv')
@@ -44,16 +45,31 @@ def get_movie_metadata(movie_id):
     movie = movies[movies['id'] == str(movie_id)].iloc[0]
     return f"Title: {movie['title']}, Genres: {movie['genres']}"
 
-def recommend_movies(user_id, model, n_recommendations=5):
+# API:
+
+def get_default_recommendations(n_recommendations=5):
+    default_movies = movies.sample(n=n_recommendations)
+    return [get_movie_metadata(movie_id) for movie_id in default_movies['id']]
+
+app = Flask(__name__)
+
+@app.route('/recommend_movies-movie', methods=['POST'])
+def recommend_movies(model, n_recommendations=5):
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    if user_id not in model.trainset.all_users():
+        return jsonify(get_default_recommendations())
+
     predictions = [model.predict(user_id, int(movie_id)) for movie_id in movies['id'].astype(int)]
     predictions.sort(key=lambda x: x.est, reverse=True)
-
     top_n = predictions[:n_recommendations]
     recommendations = [get_movie_metadata(pred.iid) for pred in top_n]
-
     return recommendations
+if __name__ == '__main__':
+    app.run(debug=True)
 
-user_id = 1
-recommendations = recommend_movies(user_id, model)
-for rec in recommendations:
-    print(rec)
+# user_id = 1
+# recommendations = recommend_movies(user_id, model)
+# for rec in recommendations:
+#     print(rec)
