@@ -53,10 +53,11 @@ def get_default_recommendations(n_recommendations=5):
 
 app = Flask(__name__)
 
-@app.route('/recommend_movies-movie', methods=['POST'])
-def recommend_movies(model, n_recommendations=5):
+@app.route('/recommend_movies', methods=['POST'])
+def recommend_movies():
     data = request.get_json()
     user_id = data.get('user_id')
+    n_recommendations=5
 
     if user_id not in model.trainset.all_users():
         return jsonify(get_default_recommendations())
